@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import http from "node:http";
 
-const BACKEND_HOST = "47.128.1.51";
-const BACKEND_PORT = 8000;
+const BACKEND_HOST = process.env.BACKEND_HOST ?? "47.128.1.51";
+const BACKEND_PORT = parseInt(process.env.BACKEND_PORT ?? "8000", 10);
 
 const HOP_BY_HOP = new Set([
   "host",

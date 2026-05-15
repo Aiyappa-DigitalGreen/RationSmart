@@ -115,6 +115,14 @@ async function handler(
             resHeaders.set(k, Array.isArray(v) ? v.join(", ") : v);
           }
         });
+        // Surface the upstream backend so the user can see in Chrome
+        // DevTools (Network → Response Headers) which host actually
+        // served the request — "dev" (47.128.1.51) or "prod"
+        // (18.60.203.199). Helps debug dev/prod data mismatches without
+        // dropping to the terminal.
+        const env = BACKEND_HOST === "18.60.203.199" ? "prod" : BACKEND_HOST === "47.128.1.51" ? "dev" : "custom";
+        resHeaders.set("x-backend-host", `${BACKEND_HOST}:${BACKEND_PORT}`);
+        resHeaders.set("x-backend-env", env);
         resolve(
           new NextResponse(body, {
             status: proxyRes.statusCode ?? 200,

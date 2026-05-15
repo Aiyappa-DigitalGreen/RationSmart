@@ -83,6 +83,14 @@ async function handler(
                 resHeaders.set(k, Array.isArray(v) ? v.join(", ") : v);
               }
             });
+            // Same debug headers as the normal-response branch — FastAPI
+            // 307-redirects any path without a trailing slash, and that
+            // re-issue lands here, so without setting the headers here
+            // most calls (auth/countries, fetch-simulation-details, etc.)
+            // never expose the upstream host to the browser.
+            const env = BACKEND_HOST === "18.60.203.199" ? "prod" : BACKEND_HOST === "47.128.1.51" ? "dev" : "custom";
+            resHeaders.set("x-backend-host", `${BACKEND_HOST}:${BACKEND_PORT}`);
+            resHeaders.set("x-backend-env", env);
             resolve(
               new NextResponse(body, {
                 status: redirectRes.statusCode ?? 200,

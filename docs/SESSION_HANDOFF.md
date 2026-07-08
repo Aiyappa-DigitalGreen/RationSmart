@@ -16,10 +16,11 @@ exact commands / paths to pick up.
 | Area | Status |
 |---|---|
 | FEED 1 wipe on lang change + Continue | **FIXED** (commit `2cd8de4`, confirmed by user). |
-| Feed Type UI | **RADIOS ONLY** — dropdown branch removed on 2026-07-08 per user ask. |
+| Feed Type UI | **RADIOS ONLY** — dropdown branch removed 2026-07-08 per user ask. |
 | Feed dropdown label (`display_name`) in Hindi | **WORKS** (`/v1/animal/feed-name` returns `display_name` translated). |
-| Feed Type radio label in Hindi | **STILL ENGLISH** — pending backend confirmation on response shape when `?lang=hi` sent to `/v1/animal/unique-feed-type/{country_id}`. |
-| Feed Category dropdown label in Hindi | **STILL ENGLISH** — same reason as Feed Type. |
+| Feed Type radio label in Hindi | **WORKS** — backend returns translated identity when `?lang=` sent. |
+| Feed Category dropdown label in Hindi | **WORKS** — same mechanism as Feed Type. |
+| Forage-required gate + Forage-first sort across languages | **WORKS** — via `src/lib/feed-type-aliases.ts`. Extend the alias set when new languages ship. |
 | Diagnostic logging | `[store] setFeedSelections(...)` warning stays as safety net for future wipe regressions. |
 | Auto-deploy | **OFF** — every change ships via manual `vercel deploy --prod --yes` + `vercel alias set`. |
 
@@ -128,27 +129,48 @@ echo them.
 - FEED 1 always shows RADIO buttons for Forage / Concentrate — the
   `feedTypes.length > 2` dropdown branch was removed.
 
-### What is NOT yet confirmed
-We have not verified the **actual response shape** the backend sends
-when `?lang=hi` is set to `/v1/animal/unique-feed-type/{country_id}`
-and `/v1/animal/unique-feed-category`. Two possible shapes:
+### Verified backend behavior (2026-07-08, live check with JWT)
 
-1. **Bare-string array with translated identity**
-   `["चारा", "अन्न"]`
-   → both `name` and `display` end up Hindi → row stores Hindi as
-     identity → downstream `/feed-name` call sends Hindi identity →
-     backend must resolve translated identity for this to work.
-   → The `hasForage` gate (`feed_type_name === "Forage"`) in
-     `src/app/(main)/feed-selection/page.tsx:578` will **incorrectly
-     block Generate** because the check hardcodes English.
-2. **Object array with both fields**
-   `[{"type_name":"Forage","display_type":"चारा"}, …]`
-   → `name` = "Forage" (English identity), `display` = "चारा" (Hindi label).
-   → Everything works end-to-end, including hasForage.
+```
+GET /v1/animal/unique-feed-type/{country_id}?lang=hi
+→ {"feed_types": ["चारा", "सांद्र आहार (दाना)"]}
 
-Yesterday's ("2026-07-07") flow reportedly showed translated labels
-AND worked, so **either** the backend returned shape #2, **or** the
-frontend was tolerating shape #1 by pure luck (no Forage gate hit).
+GET /v1/animal/unique-feed-type/{country_id}    (no lang)
+→ {"feed_types": ["Concentrate", "Forage"]}
+
+GET /v1/animal/unique-feed-category?country_id=..&lang=hi
+→ {"feed_categories": [7 Hindi strings]}
+```
+
+Two important properties confirmed:
+1. **Backend returns BARE translated strings** — there is no separate
+   `display_type` / `display_category` field. The strings ARE the identity.
+2. **Backend accepts either language as the filter parameter.** Passing
+   `feed_type=Forage&lang=hi` returns Hindi categories; passing
+   `feed_type=चारा&lang=hi` returns the same Hindi categories. This
+   means downstream `/v1/animal/feed-name` calls work regardless of
+   which language string is stored on the row.
+3. **Sort order is not guaranteed to be consistent across languages** —
+   English list came back `["Concentrate", "Forage"]`, Hindi list came
+   back with Forage first. So a naive position-based zip between an
+   English identity fetch and a localized display fetch is unsafe.
+
+### The one thing that had to change on the frontend
+
+Because identity == display in every language, several places that
+hardcoded English identity strings would silently break in Hindi.
+Fixed today (commit lands right after this doc update):
+
+- `src/lib/feed-type-aliases.ts` — new file. `FORAGE_ALIASES` /
+  `ROUGHAGE_ALIASES` set + `isForageType()` / `isRoughageType()`
+  helpers. Add entries here when new languages come online.
+- `src/components/FeedRow.tsx` — Forage-first sort in the types
+  cascade now uses `isForageType()` / `isRoughageType()`.
+- `src/app/(main)/feed-selection/page.tsx` — `hasForage` gate in
+  `handleGenerateClick` now uses `isForageType(item.feed_type_name)`
+  instead of `item.feed_type_name === "Forage"`.
+
+Everything else already worked correctly with translated identity.
 
 ### To confirm — inspect one live response
 

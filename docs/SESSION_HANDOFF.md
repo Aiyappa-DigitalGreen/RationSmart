@@ -16,11 +16,13 @@ exact commands / paths to pick up.
 | Area | Status |
 |---|---|
 | FEED 1 wipe on lang change + Continue | **FIXED** (commit `2cd8de4`, confirmed by user). |
-| Feed Type UI | **RADIOS ONLY** — dropdown branch removed 2026-07-08 per user ask. |
+| Feed Type UI | **RADIOS ONLY** — dropdown branch removed 2026-07-08. |
 | Feed dropdown label (`display_name`) in Hindi | **WORKS** (`/v1/animal/feed-name` returns `display_name` translated). |
-| Feed Type radio label in Hindi | **WORKS** — backend returns translated identity when `?lang=` sent. |
-| Feed Category dropdown label in Hindi | **WORKS** — same mechanism as Feed Type. |
-| Forage-required gate + Forage-first sort across languages | **WORKS** — via `src/lib/feed-type-aliases.ts`. Extend the alias set when new languages ship. |
+| Feed Type radio label in Hindi | **ENGLISH ONLY** — see §3 below; blocked on backend `display_type` field. |
+| Feed Category dropdown label in Hindi | **ENGLISH ONLY** — same blocker as Feed Type. |
+| Feed dropdown does not load after selecting category | **FIXED** — was caused by sending `?lang=hi` on unique-feed-type which stored Hindi identity, then `/feed-name` returned empty. Reverted `?lang=` on the two identity endpoints. |
+| Change Feed Type wipes stale Category + Feed | **WORKS** — explicit wipe in onChange handler (2026-07-08). |
+| Change Feed Category wipes stale Feed | **WORKS** — same pattern. |
 | Diagnostic logging | `[store] setFeedSelections(...)` warning stays as safety net for future wipe regressions. |
 | Auto-deploy | **OFF** — every change ships via manual `vercel deploy --prod --yes` + `vercel alias set`. |
 
@@ -155,22 +157,37 @@ Two important properties confirmed:
    back with Forage first. So a naive position-based zip between an
    English identity fetch and a localized display fetch is unsafe.
 
-### The one thing that had to change on the frontend
+### The impasse — and the pragmatic revert
 
-Because identity == display in every language, several places that
-hardcoded English identity strings would silently break in Hindi.
-Fixed today (commit lands right after this doc update):
+Sending `?lang=hi` to unique-feed-type / unique-feed-category returns
+translated identity strings. Storing "चारा" as the row's identity
+broke the downstream `/v1/animal/feed-name` fetch, which was verified
+to only accept English identity as the `feed_type` / `category` filter
+(returns `{"standard_feeds":[],"custom_feeds":[]}` for the Hindi
+equivalents even when `?lang=hi` is also present).
 
-- `src/lib/feed-type-aliases.ts` — new file. `FORAGE_ALIASES` /
-  `ROUGHAGE_ALIASES` set + `isForageType()` / `isRoughageType()`
-  helpers. Add entries here when new languages come online.
-- `src/components/FeedRow.tsx` — Forage-first sort in the types
-  cascade now uses `isForageType()` / `isRoughageType()`.
-- `src/app/(main)/feed-selection/page.tsx` — `hasForage` gate in
-  `handleGenerateClick` now uses `isForageType(item.feed_type_name)`
-  instead of `item.feed_type_name === "Forage"`.
+So the frontend **cannot ship both**:
+- localized Feed Type / Feed Category labels
+- working Feed dropdown after the user picks a category
 
-Everything else already worked correctly with translated identity.
+Without a backend fix that returns both identity and display on the
+two endpoints. Filed as a backend TODO — see
+`docs/i18n_Backend_Spec.md` (once written; short one-pager).
+
+**Current on-frontend state (2026-07-08, latest commit):**
+- `src/lib/api.ts` — `getFeedTypes` and `getFeedCategories` do NOT
+  send `?lang=`. Storage identity stays English. Downstream
+  `/v1/animal/feed-name` filter always sees English → returns data.
+- Feed Name (`fd_name` / `display_name`) still comes back translated
+  via `/v1/animal/feed-name`. The Feed dropdown label shows Hindi.
+- Feed Type + Feed Category dropdowns show English until backend
+  adds the display fields listed in §3 next.
+
+The `src/lib/feed-type-aliases.ts` file stays in place — it's a
+no-op at the moment (identity is English so `isForageType("Forage")`
+just checks the English case) but doesn't harm anything, and will
+still work correctly once backend ships proper display fields and
+we can safely restore `?lang=`.
 
 ### To confirm — inspect one live response
 

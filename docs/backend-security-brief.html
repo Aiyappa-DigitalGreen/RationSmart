@@ -1,0 +1,512 @@
+<title>RationSmart — Backend Security Remediation Brief</title>
+<style>
+  :root {
+    --ground: #f5f8f6;
+    --surface: #ffffff;
+    --surface-2: #eef3f0;
+    --ink: #16241e;
+    --ink-soft: #566860;
+    --ink-faint: #86988f;
+    --line: #e0e8e3;
+    --line-strong: #ccd8d1;
+    --brand: #064e3b;
+    --brand-2: #1ca069;
+    --brand-tint: #e4f7ef;
+    --crit: #d32410;
+    --crit-tint: #fdecea;
+    --high: #d1483f;
+    --high-tint: #fdeeed;
+    --med: #c9760a;
+    --med-tint: #fdf3e6;
+    --code-bg: #0f2019;
+    --code-ink: #d6ece2;
+    --code-key: #7fe0b0;
+    --code-str: #f0c987;
+    --code-com: #6f8a7e;
+    --shadow: 0 1px 2px rgba(6, 40, 30, .04), 0 6px 20px rgba(6, 40, 30, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0d1411;
+      --surface: #141f1a;
+      --surface-2: #1b271f;
+      --ink: #e7f0eb;
+      --ink-soft: #a3b4ab;
+      --ink-faint: #6f8378;
+      --line: #263530;
+      --line-strong: #32443c;
+      --brand: #45d99b;
+      --brand-2: #35c78d;
+      --brand-tint: rgba(28, 160, 105, .16);
+      --crit: #ff6a55;
+      --crit-tint: rgba(211, 36, 16, .16);
+      --high: #ff7d72;
+      --high-tint: rgba(209, 72, 63, .15);
+      --med: #f0a03e;
+      --med-tint: rgba(201, 118, 10, .16);
+      --code-bg: #0a1611;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 22px rgba(0, 0, 0, .35);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f5f8f6; --surface: #ffffff; --surface-2: #eef3f0; --ink: #16241e;
+    --ink-soft: #566860; --ink-faint: #86988f; --line: #e0e8e3; --line-strong: #ccd8d1;
+    --brand: #064e3b; --brand-2: #1ca069; --brand-tint: #e4f7ef;
+    --crit: #d32410; --crit-tint: #fdecea; --high: #d1483f; --high-tint: #fdeeed;
+    --med: #c9760a; --med-tint: #fdf3e6; --code-bg: #0f2019; --code-ink: #d6ece2;
+    --shadow: 0 1px 2px rgba(6,40,30,.04), 0 6px 20px rgba(6,40,30,.06);
+  }
+  :root[data-theme="dark"] {
+    --ground: #0d1411; --surface: #141f1a; --surface-2: #1b271f; --ink: #e7f0eb;
+    --ink-soft: #a3b4ab; --ink-faint: #6f8378; --line: #263530; --line-strong: #32443c;
+    --brand: #45d99b; --brand-2: #35c78d; --brand-tint: rgba(28,160,105,.16);
+    --crit: #ff6a55; --crit-tint: rgba(211,36,16,.16); --high: #ff7d72; --high-tint: rgba(209,72,63,.15);
+    --med: #f0a03e; --med-tint: rgba(201,118,10,.16); --code-bg: #0a1611; --code-ink: #d6ece2;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 22px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, pre, .mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* Header */
+  header.masthead {
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(120% 140% at 100% 0%, var(--brand-tint) 0%, transparent 55%);
+  }
+  .masthead-inner { max-width: 900px; margin: 0 auto; padding: 40px 24px 32px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--brand-2); font-weight: 700; margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(28px, 4.5vw, 40px); line-height: 1.12; margin: 0 0 16px;
+    letter-spacing: -.02em; text-wrap: balance; font-weight: 800; color: var(--ink);
+  }
+  .lede { font-size: 17px; color: var(--ink-soft); margin: 0; max-width: 62ch; }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 24px;
+    font-size: 13px; color: var(--ink-faint);
+  }
+  .meta-row b { color: var(--ink-soft); font-weight: 600; }
+
+  /* Severity legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+
+  /* Chips */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: .02em;
+    padding: 4px 10px; border-radius: 999px; border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.crit { color: var(--crit); background: var(--crit-tint); border-color: color-mix(in srgb, var(--crit) 22%, transparent); }
+  .chip.high { color: var(--high); background: var(--high-tint); border-color: color-mix(in srgb, var(--high) 22%, transparent); }
+  .chip.med  { color: var(--med);  background: var(--med-tint);  border-color: color-mix(in srgb, var(--med) 24%, transparent); }
+  .chip.brand{ color: var(--brand-2); background: var(--brand-tint); border-color: color-mix(in srgb, var(--brand-2) 22%, transparent); }
+  .chip.neutral { color: var(--ink-soft); background: var(--surface-2); border-color: var(--line); }
+
+  /* Summary table */
+  section { margin-top: 44px; }
+  h2 {
+    font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+    color: var(--ink-faint); margin: 0 0 16px; display: flex; align-items: center; gap: 12px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+  thead th {
+    text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 700; padding: 14px 16px; border-bottom: 1px solid var(--line);
+  }
+  tbody td { padding: 15px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  .idx { font-weight: 800; color: var(--brand); font-variant-numeric: tabular-nums; }
+  td .t-title { font-weight: 700; color: var(--ink); display: block; }
+  td .t-sub { color: var(--ink-soft); font-size: 13px; }
+
+  /* Finding cards */
+  .finding {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: var(--shadow); overflow: hidden; margin-top: 22px;
+  }
+  .finding-head {
+    padding: 22px 26px; border-bottom: 1px solid var(--line);
+    border-left: 5px solid var(--sev, var(--brand));
+  }
+  .finding.sev-crit { --sev: var(--crit); }
+  .finding.sev-high { --sev: var(--high); }
+  .finding.sev-med  { --sev: var(--med); }
+  .finding-head .kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+  .finding-head h3 { margin: 6px 0 14px; font-size: 22px; letter-spacing: -.01em; color: var(--ink); font-weight: 800; text-wrap: balance; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .finding-body { padding: 8px 26px 26px; }
+
+  .block { margin-top: 22px; }
+  .block > .label {
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--brand-2); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .block p { margin: 0 0 10px; color: var(--ink-soft); }
+  .block p strong, .block li strong { color: var(--ink); font-weight: 700; }
+  .block ul { margin: 8px 0 0; padding-left: 0; list-style: none; }
+  .block ul li { position: relative; padding: 5px 0 5px 22px; color: var(--ink-soft); }
+  .block ul li::before {
+    content: ""; position: absolute; left: 4px; top: 13px; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--brand-2);
+  }
+  .inline-code {
+    font-size: .88em; background: var(--surface-2); border: 1px solid var(--line);
+    padding: 1px 6px; border-radius: 6px; color: var(--ink); white-space: nowrap;
+  }
+
+  /* Scenario callout */
+  .scenario {
+    background: var(--sev-tint, var(--surface-2)); border: 1px solid var(--sev-line, var(--line));
+    border-radius: 12px; padding: 16px 18px; margin-top: 6px;
+  }
+  .finding.sev-crit .scenario { --sev-tint: var(--crit-tint); --sev-line: color-mix(in srgb, var(--crit) 26%, transparent); }
+  .finding.sev-high .scenario { --sev-tint: var(--high-tint); --sev-line: color-mix(in srgb, var(--high) 26%, transparent); }
+  .finding.sev-med  .scenario { --sev-tint: var(--med-tint);  --sev-line: color-mix(in srgb, var(--med) 28%, transparent); }
+  .scenario p { margin: 0; color: var(--ink); font-size: 14px; }
+  .scenario .s-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--sev, var(--ink-faint)); display: block; margin-bottom: 6px; }
+  .finding.sev-crit .scenario .s-label { color: var(--crit); }
+  .finding.sev-high .scenario .s-label { color: var(--high); }
+  .finding.sev-med  .scenario .s-label { color: var(--med); }
+
+  /* Code */
+  pre {
+    background: var(--code-bg); color: var(--code-ink); border-radius: 12px;
+    padding: 16px 18px; overflow-x: auto; font-size: 13px; line-height: 1.6; margin: 8px 0 0;
+    border: 1px solid rgba(127, 224, 176, .12);
+  }
+  pre .c { color: var(--code-com); }
+  pre .k { color: var(--code-key); }
+  pre .s { color: var(--code-str); }
+  .caption { font-size: 12px; color: var(--ink-faint); margin-top: 8px; font-style: italic; }
+
+  /* Two-column split for backend/frontend where present */
+  .split { display: grid; grid-template-columns: 1fr; gap: 4px; }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 4px; font-size: 13px; }
+  .kv { color: var(--ink-faint); }
+  .kv b { color: var(--ink-soft); font-weight: 600; }
+
+  footer {
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-faint);
+  }
+  footer p { margin: 4px 0; }
+  a { color: var(--brand-2); }
+
+  @media (max-width: 560px) {
+    .finding-head, .finding-body { padding-left: 18px; padding-right: 18px; }
+    .masthead-inner { padding: 32px 20px 26px; }
+    .wrap { padding: 0 18px 72px; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="eyebrow">RationSmart · Security Remediation Brief</p>
+    <h1>Three findings that require backend changes</h1>
+    <p class="lede">These are the items from the security review that the PWA <strong>cannot fully resolve on its own</strong>. Each depends on the FastAPI backend enforcing a control the client can only assist with. This brief states the risk, why it is server-side, a concrete exploit path, and the exact backend and frontend work required.</p>
+    <div class="meta-row">
+      <span><b>Prepared for</b> — Backend team (FastAPI, <span class="mono">v1</span> API)</span>
+      <span><b>Date</b> — 23 Jul 2026</span>
+      <span><b>Scope</b> — <span class="mono">47.128.1.51:8000</span> · <span class="mono">18.60.203.199:8000</span></span>
+    </div>
+    <div class="legend">
+      <span class="chip crit"><span class="dot"></span>Critical</span>
+      <span class="chip high"><span class="dot"></span>High</span>
+      <span class="chip med"><span class="dot"></span>Medium</span>
+      <span class="chip neutral">FE = frontend touch required</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <h2>At a glance</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Finding</th><th>Severity</th><th>Backend effort</th><th>Frontend touch</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="idx">3</td>
+            <td><span class="t-title">Admin authorization is client-side only</span><span class="t-sub">Non-admins can call admin endpoints directly through the proxy</span></td>
+            <td><span class="chip high"><span class="dot"></span>High</span></td>
+            <td>Medium</td>
+            <td>None (keep UI gate for UX)</td>
+          </tr>
+          <tr>
+            <td class="idx">4</td>
+            <td><span class="t-title">Client-supplied <span class="mono">user_id</span> / <span class="mono">report_id</span> (IDOR)</span><span class="t-sub">Identity taken from request body instead of the token</span></td>
+            <td><span class="chip high"><span class="dot"></span>High</span></td>
+            <td>Medium</td>
+            <td>Optional cleanup</td>
+          </tr>
+          <tr>
+            <td class="idx">2</td>
+            <td><span class="t-title">JWT stored in <span class="mono">localStorage</span></span><span class="t-sub">Session token is readable by any script; move to HttpOnly cookies</span></td>
+            <td><span class="chip med"><span class="dot"></span>Medium</span></td>
+            <td>High (architecture)</td>
+            <td>Yes — proxy + store</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px; color:var(--ink-soft); font-size:14px;">Recommended order: <strong>#3</strong> and <strong>#4</strong> first — they are the highest real-world impact and the most self-contained on the backend. <strong>#2</strong> is a genuine hardening but an architecture change with a proxy-cookie complication; weigh it against a lighter mitigation (noted in that section).</p>
+  </section>
+
+  <!-- FINDING 3 -->
+  <section>
+    <h2>Finding 3 · Admin authorization</h2>
+    <article class="finding sev-high">
+      <div class="finding-head">
+        <span class="kicker">Broken access control</span>
+        <h3>Admin access is enforced only in the browser</h3>
+        <div class="badges">
+          <span class="chip high"><span class="dot"></span>High</span>
+          <span class="chip neutral">OWASP A01: Broken Access Control</span>
+          <span class="chip brand">Backend: Medium effort</span>
+        </div>
+      </div>
+      <div class="finding-body">
+
+        <div class="block">
+          <div class="label">What happens today</div>
+          <p>The admin landing page checks <span class="inline-code">user.is_admin</span> in React and redirects non-admins to <span class="inline-code">/cattle-info</span>. That flag is populated by the client from <span class="inline-code">getUserProfile()</span>. The admin layout does no check at all, and the proxy at <span class="inline-code">/api/proxy/[...path]</span> forwards <em>any</em> path — including <span class="inline-code">/v1/admin/*</span> — to the backend with the caller's own token and <strong>no authorization logic</strong>.</p>
+          <p>So the browser UI is the only thing stopping a normal user from reaching admin data. Anyone can skip the UI entirely.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Exploit scenario</div>
+          <div class="scenario">
+            <span class="s-label">How it breaks</span>
+            <p>A regular authenticated user opens DevTools and runs<br>
+            <span class="mono">fetch("/api/proxy/v1/admin/users/")</span>.<br>
+            The request carries their valid JWT and reaches the backend. If <em>any single</em> <span class="mono">/v1/admin/*</span> route is missing its role check, they read the full user list, toggle accounts, or export feed data — with no admin rights. The client "guard" was never in the request path.</p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="label">Why the backend must own this</div>
+          <p>Client-side gating is cosmetic — the token, not the UI, is what the server sees. The only trustworthy control is a server-side role check on every admin route. <span class="inline-code">is_admin</span> must be derived server-side (from the DB or a verified JWT claim), never read from the request.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Backend changes (FastAPI)</div>
+          <ul>
+            <li>Add a single <strong>admin dependency</strong> and attach it at the router level so no route can be forgotten.</li>
+            <li>Return <strong>403</strong> consistently for authenticated non-admins (not 404).</li>
+            <li>Audit every <span class="mono">/v1/admin/*</span> route to confirm coverage — there are ~18 in the client (users, feeds, feed-types, feed-categories, feedback, reports, export, bulk-upload, translations, languages, country-languages, feed-sync).</li>
+          </ul>
+<pre><span class="c"># deps.py</span>
+<span class="k">def</span> require_admin(user: User = Depends(get_current_user)) -> User:
+    <span class="k">if</span> <span class="k">not</span> user.is_admin:
+        <span class="k">raise</span> HTTPException(status_code=<span class="s">403</span>, detail=<span class="s">"Admin privileges required"</span>)
+    <span class="k">return</span> user
+
+<span class="c"># admin_router.py — one guard covers the whole tree</span>
+admin_router = APIRouter(
+    prefix=<span class="s">"/v1/admin"</span>,
+    dependencies=[Depends(require_admin)],   <span class="c"># every route inherits it</span>
+)</pre>
+            <p class="caption">Router-level dependency is the key move: it guarantees a new admin endpoint is protected by default rather than by memory.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Frontend changes</div>
+          <p><strong>None required for security</strong> — the backend is the control. Keep the existing <span class="inline-code">is_admin</span> UI gate purely for user experience (don't show admin screens to non-admins). No proxy change: the proxy can't verify roles without decoding the JWT, and that responsibility belongs on the backend.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">How to verify</div>
+          <ul>
+            <li>With a <strong>non-admin</strong> token: <span class="mono">curl</span> each <span class="mono">/v1/admin/*</span> route → expect <span class="mono">403</span> on all.</li>
+            <li>With an <strong>admin</strong> token: same routes → expect <span class="mono">200</span>.</li>
+            <li>Add a regression test per route group so a future endpoint can't ship unguarded.</li>
+          </ul>
+        </div>
+
+      </div>
+    </article>
+  </section>
+
+  <!-- FINDING 4 -->
+  <section>
+    <h2>Finding 4 · Insecure Direct Object Reference</h2>
+    <article class="finding sev-high">
+      <div class="finding-head">
+        <span class="kicker">Identity trusted from the request body</span>
+        <h3>Client-supplied <span class="mono">user_id</span> / <span class="mono">report_id</span></h3>
+        <div class="badges">
+          <span class="chip high"><span class="dot"></span>High</span>
+          <span class="chip neutral">OWASP A01: IDOR</span>
+          <span class="chip brand">Backend: Medium effort</span>
+        </div>
+      </div>
+      <div class="finding-body">
+
+        <div class="block">
+          <div class="label">What happens today</div>
+          <p>Several requests still carry a client-controlled identifier in the body or query rather than deriving it from the JWT:</p>
+          <ul>
+            <li><span class="inline-code">POST /v1/animal/diet-evaluation-working</span> — body includes <span class="mono">user_id</span></li>
+            <li><span class="inline-code">save-report</span> — body <span class="mono">{ report_id, user_id }</span></li>
+            <li><span class="inline-code">fetch-simulation-details</span> — body <span class="mono">{ report_id, user_id }</span></li>
+            <li><span class="inline-code">insert-custom-feed</span> / <span class="inline-code">update-custom-feed</span> — body <span class="mono">user_id</span> + <span class="mono">feed_id</span></li>
+          </ul>
+          <p>If the backend uses those values instead of the authenticated subject, a user can name someone else's identifier.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Exploit scenario</div>
+          <div class="scenario">
+            <span class="s-label">How it breaks</span>
+            <p>User A sends <span class="mono">fetch-simulation-details</span> with <span class="mono">{ report_id: &lt;B's report&gt;, user_id: &lt;B&gt; }</span>. If the backend keys the lookup off the body values, A reads B's simulation — herd data, costs, contact details. The same shape lets A save or overwrite records under B's account.</p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="label">Why the backend must own this</div>
+          <p>The client can stop <em>sending</em> the field, but that alone fixes nothing — an attacker crafts the request by hand. Authorization must be enforced where the data lives: derive identity from the token and verify resource ownership before acting.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Backend changes (FastAPI)</div>
+          <ul>
+            <li><strong>Derive <span class="mono">user_id</span> from the JWT</strong> (<span class="mono">current_user.id</span>) on every endpoint; ignore any body/query <span class="mono">user_id</span> entirely.</li>
+            <li><strong>Enforce ownership</strong> on resource-scoped operations (<span class="mono">report_id</span>, <span class="mono">feed_id</span>): confirm the row belongs to <span class="mono">current_user</span> before reading/writing → else <span class="mono">404</span> (preferred over 403 to avoid confirming the resource exists).</li>
+          </ul>
+<pre><span class="k">def</span> fetch_simulation_details(
+    report_id: str,
+    user: User = Depends(get_current_user),   <span class="c"># identity from token</span>
+):
+    report = db.get_report(report_id)
+    <span class="k">if</span> report <span class="k">is</span> None <span class="k">or</span> report.user_id != user.id:
+        <span class="k">raise</span> HTTPException(status_code=<span class="s">404</span>, detail=<span class="s">"Not found"</span>)
+    <span class="k">return</span> report</pre>
+          <p class="caption">Body <span class="mono">user_id</span> is simply never read. Ownership is re-checked server-side even though the client "knows" the id.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Frontend changes</div>
+          <p><strong>Optional cleanup.</strong> Once the backend ignores body <span class="mono">user_id</span>, those parameters in <span class="inline-code">src/lib/api.ts</span> become dead weight and can be dropped (they are already documented as legacy shapes). Harmless to leave during the transition — the backend ignoring them is the fix; removing them is tidiness. <em>I can do this frontend cleanup once the backend change is live and confirmed.</em></p>
+        </div>
+
+        <div class="block">
+          <div class="label">How to verify</div>
+          <ul>
+            <li>As User A, request User B's <span class="mono">report_id</span> → expect <span class="mono">404</span>.</li>
+            <li>Send a body <span class="mono">user_id</span> that differs from the token subject → server behaves as if it were the token's user (body value has no effect).</li>
+          </ul>
+        </div>
+
+      </div>
+    </article>
+  </section>
+
+  <!-- FINDING 2 -->
+  <section>
+    <h2>Finding 2 · Session token storage</h2>
+    <article class="finding sev-med">
+      <div class="finding-head">
+        <span class="kicker">Token exfiltration surface</span>
+        <h3>JWT lives in <span class="mono">localStorage</span> — move it to an HttpOnly cookie</h3>
+        <div class="badges">
+          <span class="chip med"><span class="dot"></span>Medium</span>
+          <span class="chip neutral">OWASP A07: Auth Failures</span>
+          <span class="chip brand">Backend + Frontend</span>
+        </div>
+      </div>
+      <div class="finding-body">
+
+        <div class="block">
+          <div class="label">What happens today</div>
+          <p>Login returns <span class="inline-code">{ token: { access_token } }</span>. The PWA stores the JWT on the persisted user object in <span class="inline-code">localStorage["rationsmart-storage"]</span>, and an axios interceptor attaches <span class="inline-code">Authorization: Bearer &lt;token&gt;</span> to every request. Anything running in the page can read that token.</p>
+          <p><em>Note:</em> no XSS sink exists in the current code (no <span class="mono">dangerouslySetInnerHTML</span>, <span class="mono">eval</span>, or <span class="mono">innerHTML</span>), so this is a defense-in-depth hardening, not an active breach — but a single future XSS or a malicious dependency would turn it into full session theft.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Exploit scenario</div>
+          <div class="scenario">
+            <span class="s-label">How it breaks</span>
+            <p>Any injected script — a compromised npm dependency, a future XSS, a malicious browser extension — runs <span class="mono">localStorage.getItem("rationsmart-storage")</span>, lifts the JWT, and replays it from anywhere until it expires. An <span class="mono">HttpOnly</span> cookie is invisible to JavaScript, closing that path.</p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="label">Why the backend must own this</div>
+          <p>Only the server can set an <span class="mono">HttpOnly</span> cookie — by definition JavaScript cannot create one. The backend must issue the token as a cookie on login and read it for authentication.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Backend changes (FastAPI)</div>
+          <ul>
+            <li>On <span class="mono">login</span> and <span class="mono">set-new-pin</span>, set the JWT as a cookie: <span class="mono">HttpOnly; Secure; SameSite=Lax</span>.</li>
+            <li>Accept the token from the cookie in the auth dependency (fall back to the <span class="mono">Authorization</span> header during migration).</li>
+            <li>Add <span class="mono">POST /v1/auth/logout</span> that clears the cookie.</li>
+            <li>Because auth now rides a cookie, add <strong>CSRF protection</strong> (SameSite=Lax covers most; add a CSRF token for state-changing routes if SameSite must relax).</li>
+          </ul>
+<pre><span class="k">def</span> login(payload, response: Response):
+    token = issue_jwt(user)
+    response.set_cookie(
+        key=<span class="s">"access_token"</span>, value=token,
+        httponly=<span class="k">True</span>, secure=<span class="k">True</span>, samesite=<span class="s">"lax"</span>,
+        max_age=<span class="s">60</span> * <span class="s">60</span> * <span class="s">24</span>, path=<span class="s">"/"</span>,
+    )
+    <span class="k">return</span> {<span class="s">"user"</span>: user, <span class="s">"requires_pin_reset"</span>: ...}</pre>
+        </div>
+
+        <div class="block">
+          <div class="label">Frontend changes (required here)</div>
+          <ul>
+            <li>Stop persisting the token in the Zustand store; drop the <span class="mono">Bearer</span> interceptor.</li>
+            <li><strong>Proxy must relay cookies:</strong> the browser talks to <span class="mono">vercel.app/api/proxy</span>, not the backend host directly, so the proxy has to forward the <span class="mono">Cookie</span> header upstream and rewrite the upstream <span class="mono">Set-Cookie</span> <em>domain</em> to the Vercel origin. This is the main complication — the cookie the backend sets is scoped to <span class="mono">47.128.1.51</span>, which the browser never sees.</li>
+          </ul>
+          <p class="caption">This proxy-cookie translation is why #2 is an architecture change, not a drop-in. I'd handle the frontend/proxy half in lockstep with the backend rollout.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">Lighter alternative (if cookies aren't worth the churn)</div>
+          <p>If the team decides the localStorage risk is acceptable given no XSS exists, a cheaper mitigation set: <strong>short access-token TTL + refresh tokens</strong>, a <strong>strict Content-Security-Policy</strong> to shrink the XSS surface, and strict dependency review. This reduces the blast radius without the cookie/proxy rework. Cookies remain the stronger end state.</p>
+        </div>
+
+        <div class="block">
+          <div class="label">How to verify</div>
+          <ul>
+            <li>After login, the JWT appears in <span class="mono">Set-Cookie</span> (HttpOnly), and is <strong>absent</strong> from <span class="mono">localStorage</span> and JS-readable <span class="mono">document.cookie</span>.</li>
+            <li>Authenticated requests succeed with no <span class="mono">Authorization</span> header present.</li>
+            <li>Logout clears the cookie; subsequent calls return <span class="mono">401</span>.</li>
+          </ul>
+        </div>
+
+      </div>
+    </article>
+  </section>
+
+  <footer>
+    <p><strong>Frontend items already fixed</strong> (this session, separate from the above): production console-log stripping of JWT/PII, PIN removed from <span class="mono">localStorage</span>, proxy timeout + error-message hardening, security response headers, lint/typecheck/format tooling, and the grazing <span class="mono">distance ≥ 1</span> contract. 810 tests passing.</p>
+    <p><strong>Frontend-only, not requiring backend</strong> — npm/Next.js CVE bump (within 14.2.x), tsconfig target, lint warnings — tracked separately.</p>
+    <p style="margin-top:14px; color:var(--ink-faint);">RationSmart · internal security remediation brief · generated 23 Jul 2026</p>
+  </footer>
+
+</div>

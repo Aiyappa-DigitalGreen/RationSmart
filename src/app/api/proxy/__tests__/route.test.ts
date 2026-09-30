@@ -113,10 +113,14 @@ beforeEach(() => {
 });
 
 /** Re-imports the route module fresh, after setting BACKEND_HOST/PORT, since those constants are read once at module load. */
-async function loadHandler(host: string, port = "8000") {
+async function loadHandler(host: string, port = "8000", env?: string) {
   vi.resetModules();
   process.env.BACKEND_HOST = host;
   process.env.BACKEND_PORT = port;
+  // Each Vercel project sets BACKEND_ENV alongside BACKEND_HOST.
+  process.env.BACKEND_ENV =
+    env ??
+    (host === "<DEV_BACKEND_IP>" ? "dev" : host === "<PROD_BACKEND_IP>" ? "prod" : "custom");
   return import("@/app/api/proxy/[...path]/route");
 }
 
@@ -279,11 +283,11 @@ describe("307/308 redirect-follow (CLAUDE.md §10.11 regression guard)", () => {
   });
 
   it("derives the redirect target's path+query from an absolute Location URL", async () => {
-    const mod = await loadHandler("<PROD_BACKEND_IP>", "8000");
+    const mod = await loadHandler("192.0.2.10", "8000", "prod");
 
     httpMock.plans.push({
       statusCode: 308,
-      headers: { location: "http://<PROD_BACKEND_IP>:8000/fetch-simulation-details/?x=1" },
+      headers: { location: "http://192.0.2.10:8000/fetch-simulation-details/?x=1" },
     });
     httpMock.plans.push({ statusCode: 200, chunks: ["{}"] });
 
@@ -292,7 +296,7 @@ describe("307/308 redirect-follow (CLAUDE.md §10.11 regression guard)", () => {
 
     expect(httpMock.calls[1].path).toBe("/fetch-simulation-details/?x=1");
     expect(res.headers.get("x-backend-env")).toBe("prod");
-    expect(res.headers.get("x-backend-host")).toBe("<PROD_BACKEND_IP>:8000");
+    expect(res.headers.get("x-backend-host")).toBe("192.0.2.10:8000");
   });
 });
 

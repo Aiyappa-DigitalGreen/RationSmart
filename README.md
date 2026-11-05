@@ -3,7 +3,7 @@
 > https://github.com/ucdavis/rationsmart/tree/main/frontend
 >
 > This repository is a copy of that folder, synced to ucdavis/rationsmart
-> `main` @ 869de98 (2026-11-04). Open issues and pull requests there.
+> `main` @ f377b3a (2026-11-05). Open issues and pull requests there.
 
 # RationSmart PWA
 

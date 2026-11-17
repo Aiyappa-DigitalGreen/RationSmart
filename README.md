@@ -3,7 +3,7 @@
 > https://github.com/ucdavis/rationsmart/tree/main/frontend
 >
 > This repository is a copy of that folder, synced to ucdavis/rationsmart
-> `main` @ f377b3a (2026-11-05). Open issues and pull requests there.
+> `main` @ 4c8557e (2026-11-17). Open issues and pull requests there.
 
 # RationSmart PWA
 
@@ -188,6 +188,28 @@ vercel alias set <deploy-url> <your-domain>
 
 The app needs a Node server (`npm run build` + `npm start`), not static
 hosting: the `/api/proxy` and `/api/session` routes run server-side.
+
+### Docker
+
+`Dockerfile` builds a standalone Next.js server image; `docker-compose.yml`
+runs it. The backend runs from its own compose project, so start that first.
+By default the container reaches the backend through the host-published
+port (`BACKEND_HOST=host.docker.internal`, `BACKEND_PORT=8000`).
+
+```bash
+docker compose up -d --build        # app on http://localhost:3000
+docker compose logs -f frontend
+```
+
+Override `BACKEND_HOST`, `BACKEND_PORT`, `BACKEND_PROTOCOL`, `BACKEND_ENV`,
+`FRONTEND_PORT` or `DISABLE_PWA` in a local `.env` next to the compose file.
+`BACKEND_*` are read at runtime, so changing them needs only a restart;
+`DISABLE_PWA` is a build argument and needs `--build`.
+
+In production put a TLS reverse proxy in front: the service worker needs
+HTTPS, and the session cookie is `Secure` only when the request arrives as
+HTTPS. The proxy must preserve the `Host` header and send
+`X-Forwarded-Proto`, or login's same-origin check can fail.
 
 ---
 

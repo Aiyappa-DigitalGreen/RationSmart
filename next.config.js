@@ -65,6 +65,9 @@ const contentSecurityPolicy = [
   "connect-src 'self'",
   "worker-src 'self'",
   "manifest-src 'self'",
+  // In-app help (N11): help videos play in YouTube's no-cookie player, loaded
+  // only after the user taps ▶. Nothing else may be framed.
+  "frame-src https://www.youtube-nocookie.com",
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "object-src 'none'",
@@ -88,6 +91,9 @@ const securityHeaders = [
 ];
 
 module.exports = withPWA({
+  // Self-contained server bundle (.next/standalone) so the Docker image
+  // only ships what `node server.js` needs.
+  output: "standalone",
   reactStrictMode: true,
   images: {
     unoptimized: true,
@@ -101,9 +107,7 @@ module.exports = withPWA({
   },
   compiler: {
     removeConsole:
-      process.env.NODE_ENV === "production" && !keepConsole
-        ? { exclude: ["error"] }
-        : false,
+      process.env.NODE_ENV === "production" && !keepConsole ? { exclude: ["error"] } : false,
   },
   async headers() {
     return [

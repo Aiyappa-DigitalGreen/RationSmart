@@ -1,10 +1,3 @@
-> [!IMPORTANT]
-> **The PWA is developed in the RationSmart monorepo, folder `frontend/`:**
-> https://github.com/ucdavis/rationsmart/tree/main/frontend
->
-> This repository is a copy of that folder, synced to ucdavis/rationsmart
-> `main` @ 4c8557e (2026-11-17). Open issues and pull requests there.
-
 # RationSmart PWA
 
 A Progressive Web App for **RationSmart**, the cattle-feed ration formulation
